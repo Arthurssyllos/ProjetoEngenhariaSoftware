@@ -27,15 +27,15 @@ const TaskDetailScreen: React.FC<TaskDetailScreenProps> = ({ route, navigation }
 
   const confirmDelete = () => {
     Alert.alert(
-      "Delete Task",
-      "Are you sure you want to delete this task?",
+      "Deletar tarefa",
+      "Tem certeza que deseja deletar a tarefa?",
       [
         {
-          text: "Cancel",
+          text: "Cancelar",
           style: "cancel",
         },
         {
-          text: "Delete",
+          text: "Deletar",
           onPress: handleDelete,
           style: "destructive",
         },
@@ -51,15 +51,17 @@ const TaskDetailScreen: React.FC<TaskDetailScreenProps> = ({ route, navigation }
     <View style={styles.container}>
       <Appbar.Header>
         <Appbar.BackAction onPress={() => navigation.goBack()} />
-        <Appbar.Content title="Task Details" />
+        <Appbar.Content title="Detalhe das Tarefas" />
       </Appbar.Header>
       <View style={styles.content}>
+        <Text style={styles.subtitle}>Título:</Text>
         <Text style={styles.title}>{task.title}</Text>
-        <Text>{task.description}</Text>
+        <Text style={styles.subtitle}>Descrição:</Text>
+        <Text style={styles.description}>{task.description}</Text>
         <Button mode="contained" onPress={() => navigation.navigate('TaskForm', { taskId })}>
           Edit
         </Button>
-        <Button mode="contained" buttonColor="red" onPress={confirmDelete} style={styles.deleteButton}>
+        <Button mode="contained" onPress={confirmDelete} style={styles.deleteButton}>
           Delete
         </Button>
       </View>
@@ -74,12 +76,21 @@ const styles = StyleSheet.create({
   content: {
     padding: 20,
   },
+  subtitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 5,
+  },
   title: {
     fontSize: 24,
     marginBottom: 10,
   },
+  description: {
+    marginBottom: 20,
+  },
   deleteButton: {
     marginTop: 10,
+    backgroundColor: 'red', // Botão de deletar vermelho
   },
 });
 

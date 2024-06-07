@@ -28,26 +28,26 @@ const TaskForm: React.FC<TaskFormProps> = ({ initialTitle = '', initialDescripti
   return (
     <View style={styles.container}>
       <TextInput
-        label="Title"
+        label="Titulo da Tarefa"
         value={title}
         onChangeText={setTitle}
         style={styles.input}
       />
       <TextInput
-        label="Description"
+        label="Descrição"
         value={description}
         onChangeText={setDescription}
         style={styles.input}
         multiline
       />
       <TextInput
-        label="Color"
+        label="Cor"
         value={color}
         onChangeText={setColor}
         style={styles.input}
       />
       <Button mode="contained" onPress={handlePress} style={styles.button}>
-        Save
+        Salvar
       </Button>
     </View>
   );
