@@ -1,70 +1,84 @@
-import React, { useEffect } from 'react';
-import { View, StyleSheet, Alert } from 'react-native';
-import { Text, Button, Appbar } from 'react-native-paper';
-import { StackScreenProps } from '@react-navigation/stack';
-import { RootStackParamList } from '../types/types';
-import { getTask, deleteTask } from '../services/taskService';
+// src/screens/TaskFormDetailScreen.tsx
+import React, { useState } from 'react';
+import { View, Text, Alert, StyleSheet } from 'react-native';
+import { Button, TextInput } from 'react-native-paper';
+import { useRoute, useNavigation } from '@react-navigation/native';
 
-type TaskDetailScreenProps = StackScreenProps<RootStackParamList, 'TaskDetail'>;
+interface Task {
+  id: string;
+  title: string;
+  completed: boolean;
+}
 
-const TaskDetailScreen: React.FC<TaskDetailScreenProps> = ({ route, navigation }) => {
-  const { taskId } = route.params;
-  const [task, setTask] = React.useState<{ title: string; description: string } | null>(null);
+const TaskFormDetailScreen = () => {
+  const route = useRoute();
+  const navigation = useNavigation();
+  const { taskId, tasks, setTasks } = route.params as { taskId: string, tasks: Task[], setTasks: React.Dispatch<React.SetStateAction<Task[]>> };
+  
+  const task = tasks.find(t => t.id === taskId);
+  const [editedTask, setEditedTask] = useState(task ? task.title : '');
 
-  useEffect(() => {
-    fetchTask();
-  }, [taskId]);
+  if (!task) return <Text>Tarefa não encontrada!</Text>;
 
-  const fetchTask = async () => {
-    const fetchedTask = await getTask(taskId);
-    setTask(fetchedTask);
-  };
-
-  const handleDelete = async () => {
-    await deleteTask(taskId);
+  // Atualiza a tarefa
+  const updateTask = () => {
+    const updatedTasks = tasks.map(t =>
+      t.id === taskId ? { ...t, title: editedTask } : t
+    );
+    setTasks(updatedTasks);
     navigation.goBack();
   };
 
-  const confirmDelete = () => {
+  // Deleta a tarefa
+  const deleteTask = () => {
     Alert.alert(
-      "Deletar tarefa",
-      "Tem certeza que deseja deletar a tarefa?",
+      'Confirmar Deleção',
+      'Tem certeza que deseja deletar esta tarefa?',
       [
+        { text: 'Cancelar', style: 'cancel' },
         {
-          text: "Cancelar",
-          style: "cancel",
+          text: 'Deletar',
+          onPress: () => {
+            const updatedTasks = tasks.filter(t => t.id !== taskId);
+            setTasks(updatedTasks);
+            navigation.goBack();
+          },
+          style: 'destructive',
         },
-        {
-          text: "Deletar",
-          onPress: handleDelete,
-          style: "destructive",
-        },
-      ],
+      ]
     );
   };
 
-  if (!task) {
-    return null;
-  }
+  // Marca a tarefa como concluída
+  const toggleComplete = () => {
+    const updatedTasks = tasks.map(t =>
+      t.id === taskId ? { ...t, completed: !t.completed } : t
+    );
+    setTasks(updatedTasks);
+  };
 
   return (
     <View style={styles.container}>
-      <Appbar.Header>
-        <Appbar.BackAction onPress={() => navigation.goBack()} />
-        <Appbar.Content title="Detalhe das Tarefas" />
-      </Appbar.Header>
-      <View style={styles.content}>
-        <Text style={styles.subtitle}>Título:</Text>
-        <Text style={styles.title}>{task.title}</Text>
-        <Text style={styles.subtitle}>Descrição:</Text>
-        <Text style={styles.description}>{task.description}</Text>
-        <Button mode="contained" onPress={() => navigation.navigate('TaskForm', { taskId })}>
-          Edit
-        </Button>
-        <Button mode="contained" onPress={confirmDelete} style={styles.deleteButton}>
-          Delete
-        </Button>
-      </View>
+      <Text style={styles.title}>Editar Tarefa</Text>
+      
+      <TextInput
+        label="Nome da tarefa"
+        value={editedTask}
+        onChangeText={setEditedTask}
+        style={styles.input}
+      />
+      
+      <Button mode="contained" onPress={updateTask} style={styles.button}>
+        Atualizar Tarefa
+      </Button>
+
+      <Button mode="outlined" onPress={toggleComplete} style={styles.button}>
+        {task.completed ? 'Marcar como Não Concluído' : 'Marcar como Concluído'}
+      </Button>
+
+      <Button mode="outlined" onPress={deleteTask} style={styles.deleteButton}>
+        Deletar Tarefa
+      </Button>
     </View>
   );
 };
@@ -72,26 +86,23 @@ const TaskDetailScreen: React.FC<TaskDetailScreenProps> = ({ route, navigation }
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  content: {
     padding: 20,
-  },
-  subtitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 5,
   },
   title: {
     fontSize: 24,
-    marginBottom: 10,
-  },
-  description: {
+    fontWeight: 'bold',
     marginBottom: 20,
   },
-  deleteButton: {
+  input: {
+    marginBottom: 10,
+  },
+  button: {
     marginTop: 10,
-    backgroundColor: 'red', // Botão de deletar vermelho
+  },
+  deleteButton: {
+    marginTop: 20,
+    backgroundColor: '#ff3b30',
   },
 });
 
-export default TaskDetailScreen;
+export default TaskFormDetailScreen;

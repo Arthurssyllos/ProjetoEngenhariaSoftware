@@ -1,103 +1,51 @@
-import * as SQLite from 'expo-sqlite/legacy';
+// src/services/taskService.ts
+import { Task } from './taskModel';
 
-const db = SQLite.openDatabase('tasks.db');
+const tasks: Task[] = [];
+let currentId = 1; // Variável para rastrear o próximo ID
 
-export const initDB = () => {
-  db.transaction((tx: SQLite.SQLTransaction) => {
-    tx.executeSql(
-      'CREATE TABLE IF NOT EXISTS tasks (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, description TEXT, color TEXT);',
-      [],
-      () => {}, // Sucesso - pode ser adicionado algum código aqui se necessário
-      (_, error) => {
-        console.error("Error initializing database:", error);
-        return true; // Retorna true para indicar que a transação deve ser revertida em caso de erro
-      }
-    );
-  });
+export const initDB = async () => {
+  // Inicializa seu banco de dados aqui, se necessário
 };
 
-export const getTasks = (): Promise<any[]> => {
-  return new Promise((resolve, reject) => {
-    db.transaction((tx: SQLite.SQLTransaction) => {
-      tx.executeSql(
-        'SELECT * FROM tasks;',
-        [],
-        (_, result) => resolve(result.rows['_array']),
-        (_, error) => {
-            reject(error);
-            return true; // Retorna true para indicar que a transação deve ser revertida em caso de erro
-          }
-      );
-    });
-  });
+export const getTasks = async (): Promise<Task[]> => {
+  return tasks;
 };
 
-export const getTask = (id: number): Promise<any | null> => {
-  return new Promise((resolve, reject) => {
-    db.transaction((tx: SQLite.SQLTransaction) => {
-      tx.executeSql(
-        'SELECT * FROM tasks WHERE id = ?;',
-        [id],
-        (_, result) => {
-          if (result.rows.length > 0) {
-            resolve(result.rows['_array'][0]);
-          } else {
-            resolve(null); // Retorna null se a tarefa não for encontrada
-          }
-        },
-        (_, error) => {
-            reject(error);
-            return true; // Retorna true para indicar que a transação deve ser revertida em caso de erro
-          }
-      );
-    });
-  });
+export const getTask = async (id: number): Promise<Task | undefined> => {
+  return tasks.find(task => task.id === id);
 };
 
-export const addTask = (task: { title: string; description: string; color: string }): Promise<void> => {
-  return new Promise((resolve, reject) => {
-    db.transaction((tx: SQLite.SQLTransaction) => {
-      tx.executeSql(
-        'INSERT INTO tasks (title, description, color) VALUES (?, ?, ?);',
-        [task.title, task.description, task.color],
-        () => resolve(), // Sucesso - pode ser adicionado algum código aqui se necessário
-        (_, error) => {
-            reject(error);
-            return true; // Retorna true para indicar que a transação deve ser revertida em caso de erro
-          }
-      );
-    });
-  });
+export const addTask = async (task: Task): Promise<void> => {
+  task.id = currentId++; // Usa a variável currentId para gerar um ID único
+  tasks.push(task);
 };
 
-export const updateTask = (id: number, task: { title: string; description: string; color: string }): Promise<void> => {
-  return new Promise((resolve, reject) => {
-    db.transaction((tx: SQLite.SQLTransaction) => {
-      tx.executeSql(
-        'UPDATE tasks SET title = ?, description = ?, color = ? WHERE id = ?;',
-        [task.title, task.description, task.color, id],
-        () => resolve(), // Sucesso - pode ser adicionado algum código aqui se necessário
-        (_, error) => {
-            reject(error);
-            return true; // Retorna true para indicar que a transação deve ser revertida em caso de erro
-          }
-      );
-    });
-  });
+export const updateTask = async (id: number, updatedTask: Task): Promise<void> => {
+  const index = tasks.findIndex(task => task.id === id);
+  if (index !== -1) {
+    tasks[index] = { ...tasks[index], ...updatedTask };
+  } else {
+    throw new Error(`Task with ID ${id} not found.`);
+  }
 };
 
-export const deleteTask = (id: number): Promise<void> => {
-  return new Promise((resolve, reject) => {
-    db.transaction((tx: SQLite.SQLTransaction) => {
-      tx.executeSql(
-        'DELETE FROM tasks WHERE id = ?;',
-        [id],
-        () => resolve(), // Sucesso - pode ser adicionado algum código aqui se necessário
-        (_, error) => {
-            reject(error);
-            return true; // Retorna true para indicar que a transação deve ser revertida em caso de erro
-          }
-      );
-    });
-  });
+export const deleteTask = async (id: number): Promise<void> => {
+  const index = tasks.findIndex(task => task.id === id);
+  if (index !== -1) {
+    tasks.splice(index, 1);
+  } else {
+    throw new Error(`Task with ID ${id} not found.`);
+  }
+};
+
+// Nova função para alternar a conclusão da tarefa
+export const toggleTaskCompletion = async (id: number): Promise<void> => {
+  const index = tasks.findIndex(task => task.id === id);
+  if (index !== -1) {
+    const task = tasks[index];
+    task.status = task.status === 'concluída' ? 'a fazer' : 'concluída'; // Alterna o status da tarefa
+  } else {
+    throw new Error(`Task with ID ${id} not found.`);
+  }
 };

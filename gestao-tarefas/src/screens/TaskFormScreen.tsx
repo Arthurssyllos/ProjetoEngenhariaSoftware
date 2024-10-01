@@ -1,107 +1,134 @@
-import React, { useState, useEffect } from 'react';
-import { View, StyleSheet } from 'react-native';
-import { TextInput, Button, RadioButton, Modal, Text, Portal, Provider } from 'react-native-paper';
+import React, { useEffect, useState } from 'react';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import { TextInput, Button, Menu, Divider } from 'react-native-paper';
+import { StackScreenProps } from '@react-navigation/stack';
+import { RootStackParamList } from '../types/types';
 import { addTask, updateTask, getTask } from '../services/taskService';
+import { Task } from '../services/taskModel';
 
-const TaskFormScreen = ({ route, navigation }: { route: any, navigation: any }) => {
+type TaskFormScreenProps = StackScreenProps<RootStackParamList, 'TaskForm'>;
+
+const TaskFormScreen: React.FC<TaskFormScreenProps> = ({ route, navigation }) => {
+  const { taskId } = route.params || {};
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [priority, setPriority] = useState('');
-  const [modalVisible, setModalVisible] = useState(false);
+  const [status, setStatus] = useState<'a fazer' | 'em andamento' | 'concluída'>('a fazer');
+  const [priority, setPriority] = useState<'baixa' | 'média' | 'alta'>('baixa');
+  const [statusVisible, setStatusVisible] = useState(false);
+  const [priorityVisible, setPriorityVisible] = useState(false);
 
   useEffect(() => {
-    if (route.params && route.params.taskId) {
-      const { taskId } = route.params;
-      getTask(taskId).then((task: any) => {
-        if (task) {
-          setTitle(task.title);
-          setDescription(task.description);
-          setPriority(task.priority || '');
-        }
-      }).catch((error: any) => console.error("Error fetching task:", error));
-    }
-  }, [route.params]);
+    if (taskId) fetchTask();
+  }, [taskId]);
 
-  const handleAddOrUpdateTask = async () => {
-    if (!title.trim()) {
-      alert('Por favor, insira um título para a tarefa.');
+  const fetchTask = async () => {
+    const task = await getTask(taskId!);
+    if (task) {
+      setTitle(task.title);
+      setDescription(task.description);
+      setStatus(task.status as 'a fazer' | 'em andamento' | 'concluída');
+      setPriority(task.priority as 'baixa' | 'média' | 'alta');
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!title) {
+      alert('O título da tarefa é obrigatório!');
       return;
     }
 
-    const task = { title, description, color: priority ? mapPriorityToColor(priority) : '' };
-    const taskId = route.params && route.params.taskId;
+    const taskData: Task = {
+      title,
+      description,
+      status,
+      priority,
+      color: '#ffffff', // Define uma cor padrão ou ajuste conforme necessário
+    };
+
     if (taskId) {
-      await updateTask(taskId, task).then(() => navigation.goBack()).catch((error: any) => console.error("Error updating task:", error));
+      await updateTask(taskId, taskData);
     } else {
-      await addTask(task).then(() => navigation.goBack()).catch((error: any) => console.error("Error adding task:", error));
+      await addTask(taskData);
     }
+    navigation.goBack();
   };
 
-  const mapPriorityToColor = (priority: string) => {
-    switch (priority) {
-      case 'Baixa Prioridade':
-        return 'green';
-      case 'Média Prioridade':
-        return 'yellow';
-      case 'Alta Prioridade':
-        return 'red';
-      default:
-        return '';
-    }
-  };
+  const renderMenu = (type: 'status' | 'priority') => (
+    <Menu
+      visible={type === 'status' ? statusVisible : priorityVisible}
+      onDismiss={() => (type === 'status' ? setStatusVisible(false) : setPriorityVisible(false))}
+      anchor={<TouchableOpacity />}
+    >
+      {type === 'status' ? (
+        <>
+          <Menu.Item onPress={() => { setStatus('a fazer'); setStatusVisible(false); }} title="A Fazer" />
+          <Divider />
+          <Menu.Item onPress={() => { setStatus('em andamento'); setStatusVisible(false); }} title="Em Andamento" />
+          <Divider />
+          <Menu.Item onPress={() => { setStatus('concluída'); setStatusVisible(false); }} title="Concluída" />
+        </>
+      ) : (
+        <>
+          <Menu.Item onPress={() => { setPriority('baixa'); setPriorityVisible(false); }} title="Baixa" />
+          <Divider />
+          <Menu.Item onPress={() => { setPriority('média'); setPriorityVisible(false); }} title="Média" />
+          <Divider />
+          <Menu.Item onPress={() => { setPriority('alta'); setPriorityVisible(false); }} title="Alta" />
+        </>
+      )}
+    </Menu>
+  );
 
   return (
-    <Provider>
-      <View style={styles.container}>
+    <View style={styles.container}>
+      <TextInput
+        label="Título"
+        value={title}
+        onChangeText={setTitle}
+        style={styles.input}
+        mode="outlined"
+      />
+      <TextInput
+        label="Descrição"
+        value={description}
+        onChangeText={setDescription}
+        style={styles.input}
+        multiline
+        mode="outlined"
+      />
+      <TouchableOpacity onPress={() => setStatusVisible(true)}>
         <TextInput
-          label="Título"
-          value={title}
-          onChangeText={setTitle}
+          label="Status"
+          value={status}
           style={styles.input}
+          mode="outlined"
+          editable={false}
         />
+      </TouchableOpacity>
+      {renderMenu('status')}
+
+      <TouchableOpacity onPress={() => setPriorityVisible(true)}>
         <TextInput
-          label="Descrição"
-          value={description}
-          onChangeText={setDescription}
+          label="Prioridade"
+          value={priority}
           style={styles.input}
+          mode="outlined"
+          editable={false}
         />
-        <Button mode="outlined" onPress={() => setModalVisible(true)} style={styles.priorityButton}>
-          {priority ? `Prioridade: ${priority}` : 'Definir Prioridade'}
-        </Button>
-        <Portal>
-          <Modal visible={modalVisible} onDismiss={() => setModalVisible(false)} contentContainerStyle={styles.modalContent}>
-            <RadioButton.Group onValueChange={(value) => setPriority(value)} value={priority}>
-              <RadioButton.Item label="Baixa Prioridade" value="Baixa Prioridade" />
-              <RadioButton.Item label="Média Prioridade" value="Média Prioridade" />
-              <RadioButton.Item label="Alta Prioridade" value="Alta Prioridade" />
-            </RadioButton.Group>
-            <Button mode="contained" onPress={() => setModalVisible(false)}>Confirmar</Button>
-          </Modal>
-        </Portal>
-        <Button mode="contained" onPress={handleAddOrUpdateTask}>
-          {route.params && route.params.taskId ? 'Salvar Alterações' : 'Adicionar Tarefa'}
-        </Button>
-      </View>
-    </Provider>
+      </TouchableOpacity>
+      {renderMenu('priority')}
+
+      <Button mode="contained" onPress={handleSubmit} style={styles.button}>
+        {taskId ? 'Atualizar Tarefa' : 'Adicionar Tarefa'}
+      </Button>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-  },
-  input: {
-    marginBottom: 10,
-  },
-  priorityButton: {
-    marginBottom: 20, // Adiciona margem inferior ao botão de prioridade
-  },
-  modalContent: {
-    backgroundColor: 'white',
-    padding: 20,
-    margin: 30,
-  },
+  container: { flex: 1, padding: 20, backgroundColor: '#f5f5f5' },
+  input: { marginBottom: 20 },
+  button: { marginTop: 20, backgroundColor: '#6200ee' },
 });
 
 export default TaskFormScreen;
